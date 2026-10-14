@@ -65,8 +65,8 @@ This section provides a quickstart of how to apply **LAR-27B** on TerminalBench-
 ```bash
 # Install the corresponding environment
 # (run from the repository root; needs python3.12 + venv, git, docker with compose v2 (user in the docker group), sudo,
-#  an NVIDIA driver and CUDA toolkit for CUDA 13; MODEL = local LAR-27B checkpoint, WORK = work dir on a fast local disk)
-export MODEL=/path/to/LAR-27B WORK=/path/to/local/disk/tb21
+#  an NVIDIA driver and CUDA toolkit for CUDA 13; MODEL = LAR-27B checkpoint, WORK = work dir on a fast local disk)
+export MODEL=amazon/LAR-27B WORK=/path/to/local/disk/tb21
 python3.12 -m venv ~/.venvs/lar-serve
 ~/.venvs/lar-serve/bin/pip install -r PSWF/EvaluationKit/TB-2.1/requirements/serve.txt ./PSWF/EvaluationKit/TB-2.1
 python3.12 -m venv ~/.venvs/lar-eval
