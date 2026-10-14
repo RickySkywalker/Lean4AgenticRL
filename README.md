@@ -1,8 +1,30 @@
 # Lean4AgenticRL
 
+<div align="center">
+  <a href="https://lean4agent.github.io/">
+    <img alt="Homepage" src="https://img.shields.io/badge/Homepage-Lean4AgenticRL-536af5" />
+  </a>
+  <a href="https://huggingface.co/amazon/LAR-27B">
+    <img alt="Hugging Face: LAR-27B" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-LAR--27B%20%28coming%20soon%29-ffc107" />
+  </a>
+</div>
+
+<div align="center">
+  <a href="https://opensource.org/license/mit">
+    <img alt="Code License: MIT" src="https://img.shields.io/badge/Code_License-MIT-f5de53" />
+  </a>
+  <a href="https://www.apache.org/licenses/LICENSE-2.0">
+    <img alt="Model License: Apache 2.0" src="https://img.shields.io/badge/Model_License-Apache_2.0-f5de53" />
+  </a>
+</div>
+
+<p align="center">
+  <a href="https://arxiv.org/pdf/2606.06523"><b>Paper Link</b>👁️</a>
+</p>
+
 This is the official repository for *Lean4AgenticRL: Advancing Agentic RL with Verifiable Multi-level Process Rewards*. We achieved **77.3%** on TerminalBench-2.1 using only 27B model, achieving state-of-the-art of the model in similar size.
 
-![MainPlot](./assets/figure/MainPlot.png)
+![MainResult](./assets/figure/ResultPlot.png)
 
 ## Model performance
 
@@ -30,6 +52,8 @@ results, respectively, among the compared models of similar size.
 TerminalBench-2.0 and 2.1 use **mean@5** with **Terminus-2**.
 
 ## Introduction
+
+![MainPlot](./assets/figure/MainPlot.png)
 
 We introduce **Lean4AgenticRL**, which, to the best of our knowledge, is the first framework that grounds multi-level process rewards in a unified Lean4 formalization schema for open-ended agentic RL. **Lean4AgenticRL** first builds a problem-specific workflow system that balances the agent's own capability with controllability during execution, laying the foundation for further verification. Subsequently, our workflow formalization and multi-level reward annotation methods enable the verification of agent behavior within a general harness system. The framework provides multi-level rewards to support more effective agentic RL with the workflow-stage-normalized GRPO algorithm. Using **Lean4AgenticRL**, we train **LAR-9B/27B**, a family of models with enhanced agentic capabilities. **LAR-27B** achieves **77.3%** on TerminalBench-2.1, representing state-of-the-art performance among models of similar size. On average, our models outperform the base model by **9.89%** and surpass the second-best model of comparable size that we are aware of by **5.07%**. These results indicate the potential of integrating formal methods to enhance open-ended agentic RL.
 
