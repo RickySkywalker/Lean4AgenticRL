@@ -5,11 +5,8 @@
     <img alt="Homepage" src="https://img.shields.io/badge/Homepage-Lean4AgenticRL-536af5" />
   </a>
   <a href="https://huggingface.co/amazon/LAR-27B">
-    <img alt="Hugging Face: LAR-27B" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-LAR--27B%20%28coming%20soon%29-ffc107" />
+    <img alt="Hugging Face: LAR-27B" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-ffc107" />
   </a>
-</div>
-
-<div align="center">
   <a href="https://opensource.org/license/mit">
     <img alt="Code License: MIT" src="https://img.shields.io/badge/Code_License-MIT-f5de53" />
   </a>
