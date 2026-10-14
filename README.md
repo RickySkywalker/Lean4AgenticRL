@@ -16,7 +16,7 @@
 </div>
 
 <p align="center">
-  <a href="https://arxiv.org/pdf/2606.06523"><b>Paper Link</b>👁️</a>
+  <a href="https://github.com/RickySkywalker/Lean4AgenticRL/blob/main/assets/paper.pdf"><b>Paper Link</b>👁️</a>
 </p>
 
 This is the official repository for *Lean4AgenticRL: Advancing Agentic RL with Verifiable Multi-level Process Rewards*. We achieved **77.3%** on TerminalBench-2.1 using only 27B model, achieving state-of-the-art of the model in similar size.
