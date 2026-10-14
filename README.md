@@ -43,18 +43,34 @@ This section provides a quickstart of how to apply **LAR-27B** on TerminalBench-
 #### 1.1 Install environment
 ```bash
 # Install the corresponding environment
+# (run from the repository root; needs python3.12 + venv, git, docker with compose v2 (user in the docker group), sudo,
+#  an NVIDIA driver and CUDA toolkit for CUDA 13; MODEL = local LAR-27B checkpoint, WORK = work dir on a fast local disk)
+export MODEL=/path/to/LAR-27B WORK=/path/to/local/disk/tb21
+python3.12 -m venv ~/.venvs/lar-serve
+~/.venvs/lar-serve/bin/pip install -r PSWF/EvaluationKit/TB-2.1/requirements/serve.txt ./PSWF/EvaluationKit/TB-2.1
+python3.12 -m venv ~/.venvs/lar-eval
+~/.venvs/lar-eval/bin/pip install -r PSWF/EvaluationKit/TB-2.1/requirements/eval.txt ./PSWF/Harness/Terminus-2 ./PSWF/EvaluationKit/TB-2.1
+~/.venvs/lar-eval/bin/python -m pswf_harbor_patches --tokenizer-dir $MODEL
 ```
 
 #### 1.2 Init TB-2.1 containers
 
 ```bash
 # Initialize the TB-2.1 containers
+~/.venvs/lar-eval/bin/python -m tb21_eval.prepare --work-dir $WORK
+sudo ~/.venvs/lar-eval/bin/python -m tb21_eval.netguard up --work-dir $WORK
+~/.venvs/lar-eval/bin/python -m tb21_eval.netguard probe --work-dir $WORK
 ```
 
 ### 2. Run TB-2.1 evaluation using PSWF with Terminus-2
 
 ```bash
 # Run the evaluation
+~/.venvs/lar-serve/bin/python -m tb21_eval.serve up --model $MODEL --work-dir $WORK
+~/.venvs/lar-eval/bin/python -m tb21_eval.make_job --model $MODEL --work-dir $WORK --run-dir $WORK/runs/x5 --n-attempts 5 --n-concurrent 40
+setsid nohup ~/.venvs/lar-eval/bin/harbor run -c $WORK/runs/x5/job.json --env-file $WORK/runs/x5/harbor.env > $WORK/runs/x5/harbor.log 2>&1 &
+# ~16 h in the background; score at any time (if harbor was interrupted: ~/.venvs/lar-eval/bin/python -m tb21_eval.resume --run-dir $WORK/runs/x5)
+~/.venvs/lar-eval/bin/python -m tb21_eval.score $WORK/runs/x5
 ```
 
 ## Reference

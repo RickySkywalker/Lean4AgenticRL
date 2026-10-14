@@ -1,0 +1,5 @@
+# Prefer the base Debian suite over Debian-Security when resolving packages.
+# This changes package selection only; the Tor deny pin remains independent.
+Package: *
+Pin: release l=Debian-Security
+Pin-Priority: -1

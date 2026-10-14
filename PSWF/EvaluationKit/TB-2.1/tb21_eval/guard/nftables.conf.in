@@ -1,0 +1,18 @@
+# Task containers may reach only the configured DNS and HTTP proxy services.
+# Reject direct forwarding and other host services; drop link-local metadata traffic.
+
+table inet __TABLE__ {
+  chain task_input {
+    type filter hook input priority -120; policy accept;
+    iifname "__BRIDGE__" ip daddr 169.254.0.0/16 counter drop comment "pswf_imds_drop"
+    iifname "__BRIDGE__" ip daddr __GATEWAY__ udp dport __DNS_PORT__ counter accept comment "pswf_dns_udp_allow"
+    iifname "__BRIDGE__" ip daddr __GATEWAY__ tcp dport __DNS_PORT__ counter accept comment "pswf_dns_tcp_allow"
+    iifname "__BRIDGE__" ip daddr __GATEWAY__ tcp dport __PROXY_PORT__ counter accept comment "pswf_proxy_allow"
+    iifname "__BRIDGE__" counter reject with icmpx type admin-prohibited comment "pswf_host_surface_reject"
+  }
+
+  chain task_forward {
+    type filter hook forward priority -120; policy accept;
+    iifname "__BRIDGE__" counter reject with icmpx type admin-prohibited comment "pswf_direct_egress_reject"
+  }
+}

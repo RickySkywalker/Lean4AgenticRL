@@ -1,0 +1,6 @@
+# Prevent APT from selecting Tor clients, controllers and bridge transports.
+# The compose overlay mounts this file read-only alongside executable masks
+# and dpkg path exclusions.
+Package: tor tor-geoipdb torsocks torbrowser-launcher obfs4proxy snowflake-client snowflake-proxy lyrebird meek-client webtunnel-client conjure-client tor-arm nyx arti
+Pin: version *
+Pin-Priority: -1

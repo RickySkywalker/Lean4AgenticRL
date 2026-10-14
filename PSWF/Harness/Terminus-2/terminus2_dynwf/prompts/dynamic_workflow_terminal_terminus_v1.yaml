@@ -1,0 +1,216 @@
+name: dynwf_terminus2_v1
+goal: |
+  Given a command-line task, FIRST explore the container over the tmux terminal to specialize the generic 5-step Recommended Workflow into a concrete, task-specific Specified Workflow; THEN continue the SAME terminus-2 session (same alive container, same chat history) to solve the task with that Specified Workflow injected as the plan.
+parameters:
+  problem_statement: ${PROBLEM_STATEMENT}
+  specified_workflow: ${SPECIFIED_WORKFLOW}
+  memory_claim: ${MEMORY_CLAIM}
+workflow:
+- step:
+    name: explore_and_specify
+    instruction: |
+      You are preparing to solve a command-line task in this Linux container. You interact with it through a
+      single persistent tmux terminal by sending batches of keystrokes. Do NOT solve the task in this phase —
+      only explore and plan.
+
+      <task_description>
+      {{problem_statement}}
+      </task_description>
+
+      # PHASE 1 of 2 — EXPLORE, then output a SPECIFIED WORKFLOW
+
+      Below is the generic Recommended Workflow used to solve any command-line task. Your job is to
+      **read the task carefully and explore this specific environment**, then rewrite it into a
+      **Specified Workflow** — the same 5 steps, but filled in with the concrete success criteria,
+      environment facts, commands, and checks for THIS task.
+
+      ## Recommended Workflow (generic — make it specific)
+      1. Understand the goal: identify the concrete success criteria
+      2. Survey the environment before changing anything
+      3. Plan concrete steps
+      4. Execute incrementally, checking each step
+      5. Verify the end state
+
+      ## Do this now
+      - Re-read the task description and extract EVERY explicit requirement: exact file paths, exact file
+        / function / variable names, exact formats and values, required behaviors, services and ports.
+        The task is graded by automated tests that check these literally — a wrong filename, a wrong
+        function name, or a wrong output format fails even if the substance is right.
+      - Actually explore the environment with READ-ONLY commands: list the working directory and any
+        files/data the task mentions; read the relevant files; check which languages, tools and packages
+        the task needs are installed (`which ...`, `--version`, quick import probes) and which are
+        MISSING; check running services/ports if relevant. Ground your plan in what is actually there —
+        do not assume.
+      - Do NOT start solving: no writing solution files, no installing, no building, no config changes,
+        no starting/stopping services. (You will do all of that in phase 2, in this same container, with
+        this exploration still in your memory.)
+      - Then produce the **Specified Workflow** — rewrite each of the 5 steps with concrete specifics:
+        1. **Goal & acceptance criteria** — a precise checklist of everything that must be true at the
+           end: each required file (exact path), each required name/format/value/behavior, each service
+           that must be running. Quote the task's own words where exactness matters.
+        2. **Environment findings** — what you actually found: the relevant files/dirs and their state,
+           what is installed vs. missing, and the gap between the current state and the goal.
+        3. **Plan** — the ordered concrete steps to close the gap, with the key commands and target
+           files for each step (e.g. what to install, what to write where, what to build, what to run).
+        4. **Execution checkpoints** — after each plan step, the quick check that proves it worked
+           before moving on.
+        5. **Verification** — the exact commands you will run at the end to prove each acceptance
+           criterion, and the output you expect from each.
+
+      ## Execution rules (this phase)
+      - Every response is a JSON object with `analysis`, `plan` and `commands`, exactly as described at the
+        end of this message. While you are still exploring, put your read-only inspection commands in
+        `commands` and leave `task_complete` false or absent.
+      - This terminal is ONE persistent shell. `cd`, `export`, `source`, an activated virtualenv and a
+        backgrounded process all PERSIST from one batch to the next — you do not need to re-`cd` every time.
+      - Keep this phase SHORT: a handful of well-chosen inspection commands, not an exhaustive audit.
+        Do not consider exploration finished until you know the acceptance criteria and what is missing.
+      - **Turn budget: you have a hard cap of ~{{phase1_max_turns}} turns in this phase.** Spend at most
+        about two thirds of them exploring, then STOP exploring and write the Specified Workflow. If you
+        find yourself deep in a rabbit hole (a build failing, a tool missing), do NOT keep digging — note it
+        as a risk in the workflow and move on. An imperfect Specified Workflow grounded in what you HAVE
+        seen is far more valuable than running out of turns with none: if the cap cuts you off mid-
+        exploration, this phase produces nothing and the next phase starts without a plan.
+
+      ## Output — how to deliver the Specified Workflow
+      When exploration is done, send ONE final response shaped like this:
+
+      - `commands`: the empty array `[]` — this phase runs no more commands.
+      - `task_complete`: `true`.
+      - `plan`: **the complete Specified Workflow**, as Markdown: a one-line task summary, then the 5
+        concretized sections above. This is a JSON string, so write real newlines as `\n` and escape any
+        double quotes — everything else stays plain Markdown. Do not wrap it in a code fence, do not write
+        it to a file, and do not abbreviate it: this exact text is what you will be given as your plan in
+        phase 2.
+      - `analysis`: one or two sentences saying exploration is finished. Do NOT put the workflow here.
+
+      {{confirm_claim}}
+    save_as: specified_workflow
+- step:
+    name: solve_task
+    instruction: |
+      # PHASE 2 of 2 — SOLVE THE TASK
+
+      You are solving the following command-line task in this Linux environment:
+
+      <task_description>
+      {{problem_statement}}
+      </task_description>
+
+      ## Specified Workflow
+
+      {{memory_claim}} Below is the concrete, task-specific version of the Recommended Workflow that you
+      produced. Follow it as your plan: work through its steps in order, use its execution checkpoints, and
+      before finishing verify every item of its acceptance checklist. If, while executing, your own checks
+      show part of it is wrong, deviate and re-diagnose — the environment is the source of truth.
+
+      {{specified_workflow}}
+
+      ## Notes on this environment
+
+      - This terminal is ONE persistent shell. `cd`, `export`, `source`, an activated virtualenv and a
+        backgrounded process all PERSIST from one batch of keystrokes to the next.
+      - You may install packages and create helper scripts as needed. Always use non-interactive flags
+        (`-y`, `-f`), and avoid interactive editors like `vi` or `nano`.
+      - There is nothing to submit: you complete the task by leaving the ENVIRONMENT in the required goal
+        state, in place, in this container.
+      - Run your own verification before you finish. Set `task_complete: true` only once your own checks
+        pass; you will be asked to confirm, and confirming a second time ends the episode.
+    save_as: task_solution
+- step:
+    name: solve_task_fallback
+    instruction: |
+      # SOLVE THE TASK
+
+      You are solving the following command-line task in this Linux environment:
+
+      <task_description>
+      {{problem_statement}}
+      </task_description>
+
+      ## Notes on this environment
+
+      - This terminal is ONE persistent shell. `cd`, `export`, `source`, an activated virtualenv and a
+        backgrounded process all PERSIST from one batch of keystrokes to the next.
+      - You may install packages and create helper scripts as needed. Always use non-interactive flags
+        (`-y`, `-f`), and avoid interactive editors like `vi` or `nano`.
+      - There is nothing to submit: you complete the task by leaving the ENVIRONMENT in the required goal
+        state, in place, in this container.
+      - Run your own verification before you finish. Set `task_complete: true` only once your own checks
+        pass; you will be asked to confirm, and confirming a second time ends the episode.
+    save_as: task_solution
+- step:
+    name: phase1_wrapup_nudge
+    instruction: |
+      =====================  PHASE-1 BUDGET CHECK — WRITE THE SPECIFIED WORKFLOW NOW  =====================
+      You have used most of this phase's budget. About {{turns_left}} more turn(s) and {{seconds_left}}
+      second(s) of exploration remain before phase 1 closes. STOP exploring now.
+
+      What you have already seen IS enough. An imperfect Specified Workflow grounded in what you have
+      actually observed is worth far more than none at all, because if this phase closes without one, phase 2
+      starts with no plan whatsoever. Anything you did not get to confirm goes INTO the workflow as a risk or
+      an open question — do not spend another turn confirming it.
+
+      Send your NEXT response as the phase-1 deliverable:
+      - `commands`: the empty array `[]`
+      - `task_complete`: `true`
+      - `plan`: the complete Specified Workflow as Markdown — a one-line task summary, then the five
+        sections: **Goal & acceptance criteria**, **Environment findings**, **Plan**, **Execution
+        checkpoints**, **Verification**. This is a JSON string, so write real newlines as `\n`.
+      - `analysis`: one or two sentences saying exploration is finished. Do NOT put the workflow here.
+    save_as: phase1_wrapup
+- step:
+    name: phase1_wrapup_reminder
+    instruction: |
+      [PHASE-1 BUDGET: about {{turns_left}} turn(s) / {{seconds_left}} second(s) of exploration left. Send
+      the Specified Workflow now — `commands: []`, `task_complete: true`, the five sections in `plan`.]
+    save_as: phase1_wrapup
+- step:
+    name: phase1_forced_spec
+    instruction: |
+      =====================  EXPLORATION IS CLOSED — DELIVER THE SPECIFIED WORKFLOW  =====================
+      The exploration budget for phase 1 is spent. No further commands will be run in this phase, so do not
+      send any. Write the Specified Workflow now, from what is already in this conversation.
+
+      Reply with ONE JSON object and nothing else:
+      - `commands`: the empty array `[]`
+      - `task_complete`: `true`
+      - `plan`: the complete Specified Workflow as Markdown — a one-line task summary, then the five
+        sections: **Goal & acceptance criteria**, **Environment findings**, **Plan**, **Execution
+        checkpoints**, **Verification**. This is a JSON string, so write real newlines as `\n`.
+      - `analysis`: one sentence. Do NOT put the workflow here.
+
+      Write it from what you saw. Every requirement you extracted from the task description belongs in
+      section 1 whether or not you got to verify it in the container; everything you could not reach goes in
+      as a named risk or open question. A partial workflow is what is being asked for here. An empty `plan`
+      means phase 2 begins with no plan at all, which is strictly worse than a partial one.
+    save_as: phase1_forced_spec
+- step:
+    name: phase1_hard_stop
+    instruction: |
+      =====================  EXPLORATION IS CLOSED — YOUR {{n_refused}} COMMAND(S) WERE NOT RUN  =====================
+      The exploration budget for phase 1 is spent (about {{seconds_left}} second(s) and {{turns_left}} turn(s)
+      remain before this phase is closed by force). The commands in your last response were NOT executed and
+      no further commands will be executed in this phase. Nothing in the terminal has changed since your
+      previous observation.
+
+      Your NEXT response must be the phase-1 deliverable, written from what is already in this conversation:
+      - `commands`: the empty array `[]`
+      - `task_complete`: `true`
+      - `plan`: the complete Specified Workflow as Markdown — a one-line task summary, then the five
+        sections: **Goal & acceptance criteria**, **Environment findings**, **Plan**, **Execution
+        checkpoints**, **Verification**. This is a JSON string, so write real newlines as `\n`.
+      - `analysis`: one sentence. Do NOT put the workflow here.
+
+      Every requirement you extracted from the task description belongs in section 1 whether or not you got
+      to verify it in the container; everything you could not reach goes in as a named risk or open question.
+      A partial workflow grounded in what you HAVE seen is what is being asked for. An empty `plan` means
+      phase 2 begins with no plan at all, which is strictly worse than a partial one.
+    save_as: phase1_hard_stop
+- step:
+    name: phase1_hard_stop_repeat
+    instruction: |
+      [EXPLORATION IS CLOSED — your {{n_refused}} command(s) were NOT run and none will be. About
+      {{seconds_left}} second(s) / {{turns_left}} turn(s) remain. Send the Specified Workflow NOW:
+      `commands: []`, `task_complete: true`, the five sections in `plan`.]
+    save_as: phase1_hard_stop
