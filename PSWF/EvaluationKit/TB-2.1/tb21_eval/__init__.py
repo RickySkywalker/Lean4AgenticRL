@@ -115,7 +115,6 @@ def agent_kwargs(api_base: str, trusted_root: str) -> dict:
         "phase1_wrapup_frac": 0.6,
         "phase1_wrapup_turn_frac": 0.6,
         "phase2_endgame_s": 1800.0,
-        "phase2_min_frac": 0.4,
         "phase2_reinject_on_summarize": True,
         "phase2_replan_before_compact": True,
         "phase2_replan_free_tokens": 32768.0,

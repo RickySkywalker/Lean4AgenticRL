@@ -62,7 +62,7 @@ class Handler(BaseHTTPRequestHandler):
             text = 'x ' * 32766 if first else 'valid continuation'
             count = 32768 if first else 3
             reply = {'id': 'fixture', 'object': 'chat.completion', 'created': 1,
-                'model': 'Qwen/Qwen3.8-27B',
+                'model': 'amazon/LAR-27B',
                 'choices': [{'index': 0, 'message': {'role': 'assistant',
                     'content': text, 'reasoning_content': 'r'},
                     'finish_reason': 'length' if first else 'stop'}],
@@ -89,7 +89,7 @@ class RequestBudgetHTTPTests(unittest.TestCase):
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         try:
-            llm = LiteLLM('openai/Qwen/Qwen3.8-27B', temperature=1.0,
+            llm = LiteLLM('openai/amazon/LAR-27B', temperature=1.0,
                 api_base=f'http://127.0.0.1:{server.server_port}/v1', api_key='local',
                 timeout=10, num_retries=10,
                 model_info={'max_input_tokens': 212992, 'max_output_tokens': 32768,
@@ -99,7 +99,7 @@ class RequestBudgetHTTPTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmp:
                 agent = namespace['make_agent'](Path(tmp), request_input_budget_guard=enabled)
                 agent._llm = llm
-                agent._model_name = 'openai/Qwen/Qwen3.8-27B'
+                agent._model_name = 'openai/amazon/LAR-27B'
                 agent._llm_call_kwargs = {'max_tokens': 32768, 'top_p': 0.95,
                     'extra_body': {'chat_template_kwargs': {'enable_thinking': True,
                         'preserve_thinking': True, 'reasoning_effort': 'xhigh'}}}
@@ -128,12 +128,12 @@ class RequestBudgetHTTPTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
             thread.join(timeout=5)
-    def test_unfixed_path_reproduces_oversized_http_requests(self):
+    def test_disabled_guard_allows_oversized_http_requests(self):
         report = self.run_case(False)
         self.assertGreaterEqual(report['oversized_http_calls'], 1)
         self.assertTrue(any(n + 32768 > 262144 for n in report['wire_input_tokens']))
         print(json.dumps(report), flush=True)
-    def test_fixed_path_uses_existing_fallback_without_oversized_http(self):
+    def test_enabled_guard_uses_context_fallback_without_oversized_http(self):
         report = self.run_case(True)
         self.assertEqual(report['http_calls'], 2)
         self.assertEqual(report['oversized_http_calls'], 0)

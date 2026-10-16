@@ -60,7 +60,7 @@ def make_agent(tmp: Path, **kw) -> Terminus2Dynamic:
     defaults.update(kw)
     a = Terminus2Dynamic(
         logs_dir=tmp / "agent",
-        model_name="openai/deepseek-v4-flash",
+        model_name="openai/amazon/LAR-27B",
         max_turns=250,
         api_base="http://127.0.0.1:8800/v1",
         temperature=0.6,

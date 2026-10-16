@@ -9,6 +9,15 @@ dist/
 .coverage
 .coverage.*
 htmlcov/
+.venv/
+venv/
+.ipynb_checkpoints/
+.DS_Store
+
+# Local credentials and environment configuration
+.env
+.env.*
+!.env.example
 
 # Local run outputs
 runs/

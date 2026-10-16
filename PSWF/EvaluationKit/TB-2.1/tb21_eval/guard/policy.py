@@ -22,7 +22,7 @@ import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 def proc_starttime_ticks(pid: int | None = None) -> int:
     """Read the Linux process start time used to detect PID reuse."""
@@ -1381,13 +1381,3 @@ def scan_executable_text(text: str) -> tuple[str, str] | None:
     if host_surface is not None:
         return "scan", host_surface
     return None
-
-def policy_digest(paths: Iterable[Path]) -> str:
-    """Hash sorted policy paths and their current file contents."""
-    hasher = hashlib.sha256()
-    for path in sorted(paths, key=lambda item: str(item)):
-        hasher.update(str(path).encode())
-        hasher.update(b"\0")
-        hasher.update(path.read_bytes())
-        hasher.update(b"\0")
-    return hasher.hexdigest()

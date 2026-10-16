@@ -1,4 +1,4 @@
-"""Harbor patches and fixed source identities for the cleaned PSWF release.
+"""Harbor patches and fixed source identities for the PSWF release.
 
 The tokenizer and summarizer patches supply the agent's context accounting.
 The other patches configure container cleanup, networking, hooks, and verifier
@@ -14,6 +14,6 @@ PRISTINE_TREE = (308, "da69af1a70e8e9f0a03f1d431ecc32e083f5a97bc5addad8068e2758d
 PATCHED_TREE = (308, 'ebd81c4a0b3f1aa5eb16040aef0beb5c422bab4c30f01ca099d6607eee9b6363')
 
 # Release identity of the agent package (see __main__.harness_identity).
-HARNESS_IDENTITY = '9198b90207a03b6fbce8c05c7e2abf5837e32e57358cafbf32f2db1bef43ce9b'
+HARNESS_IDENTITY = '1f3258783e599809da8565b81b127e16e27239d4e6e7d0929e088843b630b7a8'
 
 __version__ = "1.0.0"

@@ -108,7 +108,7 @@ if dumped:
     body = dumped[0].read_text()
     check(body == NEW_SPEC, "the dumped bytes ARE the accepted plan")
     check(hashlib.sha256(body.encode()).hexdigest() == row.get("spec_sha256"),
-          "the dump's sha256 matches the witness recorded in the row -- the audit can now diff, not infer")
+          "the dump's sha256 matches the witness recorded in the row")
 
 print("\n-- containment: it must NOT be written where the container can see it")
 in_logs = list(Path(logs).rglob("specified_workflow_refreshed_*.md"))

@@ -550,7 +550,7 @@ def main() -> int:
         "--upstream-proxy",
         default="",
         help="HOST:PORT of a parent instance of this proxy; the outbound leg of every locally validated "
-        "connection goes there instead of to the validated address (see PARENT-PROXY MODE)",
+        "connection goes there instead of directly to the validated address",
     )
     parser.add_argument(
         "--allow-clients",

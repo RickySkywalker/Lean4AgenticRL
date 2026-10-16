@@ -24,7 +24,7 @@ from pswf_harbor_patches import HARBOR_REV, HARBOR_VERSION, HARNESS_IDENTITY, PA
 
 HERE = Path(__file__).resolve().parent
 
-# (script, arguments) in the original order. {hp} = installed harbor package dir, {m} = manifest dir.
+# (script, arguments) in dependency order. {hp} = installed harbor package dir, {m} = manifest dir.
 PATCHES = [
     ("patch_harbor_cleanup.py",
      ["--target", "{hp}/environments/docker/docker.py", "--manifest", "{m}/harbor-cleanup-patch.json"]),

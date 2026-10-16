@@ -68,7 +68,6 @@ class Terminus2Dynamic(Terminus2):
         phase1_frac: float = 0.27,
         phase1_min_s: float = 60.0,
         phase1_max_s: float = 0.0,
-        phase2_min_frac: float = 0.40,
         agent_budget_s: float = 7200.0,
         spec_min_chars: int = SPEC_MIN_CHARS_DEFAULT,
         spec_max_chars: int = 0,
@@ -140,7 +139,6 @@ class Terminus2Dynamic(Terminus2):
         self.phase1_frac = float(phase1_frac)
         self.phase1_min_s = float(phase1_min_s)
         self.phase1_max_s = float(phase1_max_s)
-        self.phase2_min_frac = float(phase2_min_frac)
         self.agent_budget_s = float(agent_budget_s)
         self.phase2_endgame_s = float(phase2_endgame_s)
         if self.phase2_endgame_s < 0:

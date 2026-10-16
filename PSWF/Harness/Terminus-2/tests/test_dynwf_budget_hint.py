@@ -63,7 +63,7 @@ check(wf_render.BUDGET_HINT_HEADER not in p1, "no hint in the phase-1 prompt whe
 check(meta.get("phase1_budget_hint") is False, "meta records phase1_budget_hint=False", str(meta.get("phase1_budget_hint")))
 expected_instr = wf_render.render_phase1(a._wf_doc, "Make the failing tests pass.", 30, wf_render.CONFIRM_CLAIM_SINGLE)
 check(expected_instr in p1 and "Phase-boundary handoff:" in p1, "phase-1 prompt == render_phase1 + the fresh-chat handoff paragraph (unchanged)")
-check(meta["phase1_explore_budget_s"] == 1344.0 and meta["phase1_reserve_s"] == 600.0, "budget arithmetic unchanged by the move (1344 / 600)",
+check(meta["phase1_explore_budget_s"] == 1344.0 and meta["phase1_reserve_s"] == 600.0, "phase-1 budget splits into 1344 seconds of exploration and 600 seconds of reserve",
       f"{meta['phase1_explore_budget_s']} / {meta['phase1_reserve_s']}")
 class SyntheticDynamic(Terminus2Dynamic):
     """Exercise inherited defaults without an external training package."""

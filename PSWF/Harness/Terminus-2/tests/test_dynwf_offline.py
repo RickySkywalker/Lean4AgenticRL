@@ -77,26 +77,22 @@ for bad in (
     "each shell command runs in a new subshell",
     "end your turn with NO tool call",
 ):
-    check(bad not in p1, f"phase-1 prompt does NOT contain CC-ism: {bad!r}")
+    check(bad not in p1, f"phase-1 prompt uses the terminal JSON contract: excludes {bad!r}")
 
-v31 = wf_render.load_wf(Path(wf_render.PROMPTS_DIR / "dynamic_workflow_terminal_v3.1.yaml"))
-a = wf_render.step_instruction(doc, "explore_and_specify")
-b = wf_render.step_instruction(v31, "explore_and_specify")
-START = "- Then produce the **Specified Workflow**"
-END = "criterion, and the output you expect from each."
-
-
-def five_section(t: str) -> str:
-    i = t.index(START)
-    j = t.index(END) + len(END)
-    return t[i:j]
-
-
-check(
-    five_section(a) == five_section(b),
-    "five-section deliverable block is byte-identical to v3.1",
-    f"{len(five_section(a))} vs {len(five_section(b))}",
+sections = (
+    "Goal & acceptance criteria",
+    "Environment findings",
+    "Plan",
+    "Execution checkpoints",
+    "Verification",
 )
+section_positions = [p1.find(f"{index}. **{section}**") for index, section in enumerate(sections, 1)]
+check(all(position >= 0 for position in section_positions),
+      "phase-1 prompt requests all five workflow sections")
+check(section_positions == sorted(section_positions),
+      "workflow sections put acceptance criteria and findings before execution and verification")
+check("exact commands you will run at the end to prove each acceptance" in p1,
+      "workflow verification must connect commands to acceptance criteria")
 
 print("== extraction ladder ==")
 resp = json.dumps(
@@ -136,7 +132,7 @@ acc, rej, why = sanitize_spec(REASONING_PREAMBLE)
 check(not acc and bool(rej), "a THOUGHT reasoning preamble is REJECTED", why)
 check("stopword" in why or "unshaped" in why or "words=" in why, "rejection reason is specific", why)
 acc, rej, why = sanitize_spec("#")
-check(not acc, "a two-character '#' plan is REJECTED (the old near-tautological gate passed it)", why)
+check(not acc, "a one-character '#' plan is REJECTED", why)
 acc, rej, why = sanitize_spec("<think>" + REASONING_PREAMBLE + "</think>\n" + SYNTHETIC_SPEC)
 check(bool(acc) and "THOUGHT" not in acc, "a leaked <think> block is stripped and the plan kept", why)
 acc, rej, why = sanitize_spec("x " * 300)

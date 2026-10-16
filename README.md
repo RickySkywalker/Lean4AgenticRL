@@ -7,7 +7,7 @@
   <a href="https://huggingface.co/amazon/LAR-27B">
     <img alt="Hugging Face: LAR-27B" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-ffc107" />
   </a>
-  <a href="https://opensource.org/license/mit">
+  <a href="./LICENSE">
     <img alt="Code License: MIT" src="https://img.shields.io/badge/Code_License-MIT-f5de53" />
   </a>
   <a href="https://www.apache.org/licenses/LICENSE-2.0">
@@ -22,8 +22,6 @@
 This is the official repository for *Lean4AgenticRL: Advancing Agentic RL with Verifiable Multi-level Process Rewards*. We achieved **77.3%** on TerminalBench-2.1 using only 27B model, achieving state-of-the-art of the model in similar size.
 
 ![MainResult](./assets/figure/ResultPlot.png)
-
-## Model performance
 
 ## Main Results
 
@@ -56,43 +54,55 @@ We introduce **Lean4AgenticRL**, which, to the best of our knowledge, is the fir
 
 ## Quickstart
 
-This section provides a quickstart of how to apply **LAR-27B** on TerminalBench-2.1 using Terminus-2 harness with PSWF. 
+This release contains the PSWF Terminus-2 harness and the TerminalBench-2.1 evaluation kit. Lean4 formalization, reward annotation, RL training, and the other benchmark evaluation pipelines described in the paper are not included in this checkout.
 
-**Requirement: 8xH200 machine to host the model and run the experiment**
+This section shows how to evaluate **LAR-27B** on TerminalBench-2.1 using Terminus-2 with PSWF.
+
+**Requirements:** a Linux machine with 8 H200 GPUs, Python 3.12 with `venv`, Git, Docker with Compose v2 (and permission to run Docker), `sudo`, `nftables` (`nft`), `setsid`, and an NVIDIA driver and CUDA toolkit supporting CUDA 13. The default 40 concurrent task containers each have limits of 4 CPUs and 40 GiB RAM; choose concurrency appropriate for the host.
+
+Keep model files and the evaluation work directory on a fast local disk outside this source checkout. `MODEL` must be a local checkpoint directory containing the model weights, `config.json`, `tokenizer.json`, and `chat_template.jinja`.
 
 ### 1. Install dependencies
 #### 1.1 Install environment
 ```bash
-# Install the corresponding environment
-# (run from the repository root; needs python3.12 + venv, git, docker with compose v2 (user in the docker group), sudo,
-#  an NVIDIA driver and CUDA toolkit for CUDA 13; MODEL = LAR-27B checkpoint, WORK = work dir on a fast local disk)
-export MODEL=amazon/LAR-27B WORK=/path/to/local/disk/tb21
+# Run from the repository root; replace these with absolute local paths.
+export MODEL=/path/to/local/disk/LAR-27B
+export WORK=/path/to/local/disk/tb21
 python3.12 -m venv ~/.venvs/lar-serve
 ~/.venvs/lar-serve/bin/pip install -r PSWF/EvaluationKit/TB-2.1/requirements/serve.txt ./PSWF/EvaluationKit/TB-2.1
 python3.12 -m venv ~/.venvs/lar-eval
 ~/.venvs/lar-eval/bin/pip install -r PSWF/EvaluationKit/TB-2.1/requirements/eval.txt ./PSWF/Harness/Terminus-2 ./PSWF/EvaluationKit/TB-2.1
-~/.venvs/lar-eval/bin/python -m pswf_harbor_patches --tokenizer-dir $MODEL
+# Download the checkpoint before applying the tokenizer patch.
+~/.venvs/lar-eval/bin/hf download amazon/LAR-27B --local-dir "$MODEL"
+~/.venvs/lar-eval/bin/python -m pswf_harbor_patches --tokenizer-dir "$MODEL"
 ```
 
 #### 1.2 Init TB-2.1 containers
 
 ```bash
 # Initialize the TB-2.1 containers
-~/.venvs/lar-eval/bin/python -m tb21_eval.prepare --work-dir $WORK
-sudo ~/.venvs/lar-eval/bin/python -m tb21_eval.netguard up --work-dir $WORK
-~/.venvs/lar-eval/bin/python -m tb21_eval.netguard probe --work-dir $WORK
+~/.venvs/lar-eval/bin/python -m tb21_eval.prepare --work-dir "$WORK"
+sudo ~/.venvs/lar-eval/bin/python -m tb21_eval.netguard up --work-dir "$WORK"
+~/.venvs/lar-eval/bin/python -m tb21_eval.netguard probe --work-dir "$WORK"
 ```
 
 ### 2. Run TB-2.1 evaluation using PSWF with Terminus-2
 
 ```bash
 # Run the evaluation
-~/.venvs/lar-serve/bin/python -m tb21_eval.serve up --model $MODEL --work-dir $WORK
-~/.venvs/lar-eval/bin/python -m tb21_eval.make_job --model $MODEL --work-dir $WORK --run-dir $WORK/runs/x5 --n-attempts 5 --n-concurrent 40
-setsid nohup ~/.venvs/lar-eval/bin/harbor run -c $WORK/runs/x5/job.json --env-file $WORK/runs/x5/harbor.env > $WORK/runs/x5/harbor.log 2>&1 &
-# ~16 h in the background; score at any time (if harbor was interrupted: ~/.venvs/lar-eval/bin/python -m tb21_eval.resume --run-dir $WORK/runs/x5)
-~/.venvs/lar-eval/bin/python -m tb21_eval.score $WORK/runs/x5
+~/.venvs/lar-serve/bin/python -m tb21_eval.serve up --model "$MODEL" --work-dir "$WORK"
+~/.venvs/lar-eval/bin/python -m tb21_eval.make_job --model "$MODEL" --work-dir "$WORK" --run-dir "$WORK/runs/x5" --n-attempts 5 --n-concurrent 40
+setsid nohup ~/.venvs/lar-eval/bin/harbor run -c "$WORK/runs/x5/job.json" --env-file "$WORK/runs/x5/harbor.env" > "$WORK/runs/x5/harbor.log" 2>&1 &
+# ~16 h in the background; score at any time.
+# If interrupted: ~/.venvs/lar-eval/bin/python -m tb21_eval.resume --run-dir "$WORK/runs/x5"
+~/.venvs/lar-eval/bin/python -m tb21_eval.score "$WORK/runs/x5"
 ```
+
+The kit runs 89 tasks with a 20,000-second agent budget per attempt. Its default `kit` scoring policy uses the first round containing at least five attempts and no trial classified as an infrastructure failure for a task, selecting the first five trials by name. A verifier timeout without a recorded reward after pytest starts counts as zero. Other missing or invalid verification evidence, infrastructure failures, and model-guard refusals make that round ineligible; tasks without an eligible round remain pending, and recovery reruns all five attempts. Pending slots count as zero in the displayed mean. The report also shows Harbor's `stock` reward policy. See [the scorer](PSWF/EvaluationKit/TB-2.1/tb21_eval/score.py) for the classification rules and [the harness README](PSWF/Harness/Terminus-2/README.md) for standalone use and tests.
+
+## License
+
+The code is released under the [MIT License](LICENSE). Model weights use the separate Apache 2.0 license indicated on the model page.
 
 ## Reference
 

@@ -7,6 +7,7 @@ name = "pswf-tb21-eval"
 version = "1.0.0"
 description = "Evaluation kit: LAR-27B on TerminalBench-2.1 with the PSWF Terminus-2 harness (serving, task prep, network guard, harbor job, scoring)"
 requires-python = ">=3.12"
+license = {file = "LICENSE"}
 # No dependencies on purpose: the kit is installed into both environments of the Quickstart. The serving env
 # brings sglang/sglang-router; the evaluation env brings harbor (+ fastapi/uvicorn/httpx used by the model guard).
 dependencies = []

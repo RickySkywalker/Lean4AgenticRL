@@ -106,9 +106,6 @@ C4_SETUP_TRANSPORT_RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
      re.compile(r"(?:huggingface|hf_hub|cdn-lfs|xet|cas client|cas-bridge)"
                 r"[^\n]{0,240}(?:error|failed|forbidden|timed? out|offline|"
                 r"not found|connection|middleware)", re.IGNORECASE)),
-    ("hidden_cache_invalid",
-     re.compile(r"/opt/q38-hidden[^\n]{0,240}(?:not found|missing|corrupt|"
-                r"checksum|sha-?256|unexpected eof|badgzipfile|arrowinvalid)", re.IGNORECASE)),
 )
 
 PASS_THRESHOLD = 1.0       # TB-2.1 rewards are binary: a pass is reward >= 1

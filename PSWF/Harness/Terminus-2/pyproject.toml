@@ -7,6 +7,7 @@ name = "pswf-terminus2"
 version = "1.0.0"
 description = "PSWF (problem-specific workflow, a.k.a. dynamic workflow) harness for harbor's Terminus-2 agent on TerminalBench-2.1"
 requires-python = ">=3.12"
+license = {file = "LICENSE"}
 # Install into the environment pinned by EvaluationKit/TB-2.1/requirements/eval.txt.
 # The Harbor commit provides runtime dependencies; its PyPI version alone is insufficient.
 dependencies = []

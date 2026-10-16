@@ -32,7 +32,7 @@ class Handler(BaseHTTPRequestHandler):
             body={'error':{'type':self.server.error_type,'message':self.server.message}}
         else:
             status=200
-            body={'id':'fixture','object':'chat.completion','created':1,'model':'Qwen/Qwen3.8-27B','choices':[{'index':0,'message':{'role':'assistant','content':'fixture ok','reasoning_content':'fixture reasoning'},'finish_reason':'stop'}],'usage':{'prompt_tokens':1,'completion_tokens':2,'total_tokens':3,'completion_tokens_details':{'reasoning_tokens':1}}}
+            body={'id':'fixture','object':'chat.completion','created':1,'model':'amazon/LAR-27B','choices':[{'index':0,'message':{'role':'assistant','content':'fixture ok','reasoning_content':'fixture reasoning'},'finish_reason':'stop'}],'usage':{'prompt_tokens':1,'completion_tokens':2,'total_tokens':3,'completion_tokens_details':{'reasoning_tokens':1}}}
         raw=json.dumps(body).encode()
         self.send_response(status);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(raw)));self.end_headers();self.wfile.write(raw)
 
@@ -43,7 +43,7 @@ class PolicyHTTPTests(unittest.TestCase):
         self.server.error_type='guard_policy_violation'
         self.server.message='model command batch refused before execution (scan)'
         threading.Thread(target=self.server.serve_forever,daemon=True).start()
-        self.llm=LiteLLM('openai/Qwen/Qwen3.8-27B',temperature=1.0,api_base=f'http://127.0.0.1:{self.server.server_port}/v1',api_key='local',timeout=3,model_info={'max_input_tokens':262144,'max_output_tokens':32768,'input_cost_per_token':0,'output_cost_per_token':0,'cache_creation_input_token_cost':0,'cache_read_input_token_cost':0,'mode':'chat'})
+        self.llm=LiteLLM('openai/amazon/LAR-27B',temperature=1.0,api_base=f'http://127.0.0.1:{self.server.server_port}/v1',api_key='local',timeout=3,model_info={'max_input_tokens':262144,'max_output_tokens':32768,'input_cost_per_token':0,'output_cost_per_token':0,'cache_creation_input_token_cost':0,'cache_read_input_token_cost':0,'mode':'chat'})
     def tearDown(self):
         self.server.shutdown();self.server.server_close()
     def test_real_client_denial_stops_before_retry_or_phase2(self):

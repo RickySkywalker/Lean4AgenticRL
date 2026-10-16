@@ -35,13 +35,12 @@ bounded retries for transient verifier dependency errors.
 
 The patch command accepts the pinned pristine tree or this release's patched tree.
 It verifies the installed Harbor and harness against the release digests in
-`pswf_harbor_patches/__init__.py`. These digests identify the cleaned release source,
+`pswf_harbor_patches/__init__.py`. These digests identify the release source,
 including its comments and prompt files. `python -m pswf_harbor_patches --check`
 verifies an existing installation without applying patches.
 
-When upgrading from an earlier patched installation, recreate the environment or
-reinstall the pinned pristine Harbor revision before applying this release. The
-verifier rejects an older patched tree whose source digest differs from this release.
+If the installed source matches neither supported digest, recreate the environment
+or reinstall the pinned pristine Harbor revision before applying the patches.
 
 ## Use
 
@@ -64,9 +63,9 @@ not redact their contents.
 ## Tests
 
 Run the standalone tests in the Harbor environment after applying the release
-patches. The HTTP tests use a loopback server and a local tokenizer, with no model
-inference or benchmark tasks. Store test output and temporary files outside the
-release tree:
+patches. The HTTP tests use a loopback server and the served model's local
+`tokenizer.json` and adjacent `chat_template.jinja`, with no model inference or
+benchmark tasks. Store test output and temporary files outside the release tree:
 
 ```bash
 export PYTHONDONTWRITEBYTECODE=1

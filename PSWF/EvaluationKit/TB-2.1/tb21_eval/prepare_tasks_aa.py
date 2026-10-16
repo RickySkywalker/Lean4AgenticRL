@@ -3,7 +3,7 @@
 
 The source must be the ``tasks`` directory from the pinned official checkout.
 The source is never edited.  A derived copy is made and the *agent* timeout in
-each task is raised to 7,200 seconds when it is lower.  No verifier timeout or
+each task is raised to 20,000 seconds when it is lower.  No verifier timeout or
 other task input is changed.
 
 The JSON manifest is the audit boundary for the derived dataset: it records the
@@ -33,7 +33,7 @@ SCHEMA_VERSION = "qwen38.tb21.aa-task-tree.v1"
 EXPECTED_REPOSITORY = "harbor-framework/terminal-bench-2-1"
 EXPECTED_COMMIT = "7131e4375048a0e408a8fb404b5f499d726b695b"
 EXPECTED_TASKS = 89
-AA_AGENT_TIMEOUT_FLOOR_SEC = 7200.0
+AA_AGENT_TIMEOUT_FLOOR_SEC = 20000.0
 
 AGENT_SECTION_RE = re.compile(
     r"(?ms)^\[agent\][ \t]*(?:\r?\n|$)(?P<body>.*?)(?=^\[|\Z)"

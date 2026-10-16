@@ -43,12 +43,6 @@ MAX_REWARD_BYTES = 1024 * 1024
 PERMISSION_HANDOFF_TIMEOUT_SECONDS = 30.0
 LINEAGE_NAME = "verifier-retry.json"
 LINEAGE_SCHEMA = "qwen38.harbor-verifier-dependency-retry.v3.1"
-LEGACY_INSTALLED_SHA256 = {
-    "a50dabfa70b7cefaa632227a99fa5c769f086efc83f008417343757fabee2d82",
-    "87ac27e6e617b067c04df63c07d18de70cbc8c3ab95baa3ed3e1038b03bb06f6",
-    "29899504b55673643a3893f80795b67cab26c9cc8eb7e871933cca1cad1bb51d",
-    "fa2e996955028028179b2764d3487d09ef6203f03bf04d6ab7981a5b5530052b",
-}
 if len(RETRY_BACKOFF_SECONDS) != MAX_ATTEMPTS - 1:
     raise RuntimeError("retry backoff schedule must cover every possible retry")
 PYTEST_START_MARKERS = (
@@ -736,286 +730,6 @@ EXECUTION_OLD = """        command = build_execution_command(
                 ) from e
 """
 
-EXECUTION_NEW = """        if needs_chmod(test_script_path):
-            await self.environment.exec(
-                command=f"chmod +x {quote_shell_arg(test_script_path, self.environment.os)}",
-                user="root",
-            )
-
-        ctrf_path = self.trial_paths.verifier_dir / "ctrf.json"
-        lineage_path = self.trial_paths.verifier_dir / _Q38_VERIFIER_RETRY_LINEAGE_NAME
-        attempt_paths = [
-            self.trial_paths.verifier_dir / f"test-stdout.attempt-{attempt}.txt"
-            for attempt in range(1, _Q38_VERIFIER_RETRY_MAX_ATTEMPTS + 1)
-        ]
-
-        # A regrade may reuse a verifier directory.  Remove only this patch's
-        # exact bookkeeping paths; official tests and assertions are untouched.
-        for stale_path in [self.trial_paths.test_stdout_path, lineage_path, *attempt_paths]:
-            stale_path.unlink(missing_ok=True)
-
-        async def clear_official_outputs() -> None:
-            # Clear before attempt one as well as between attempts: otherwise a
-            # regrade/setup failure could inherit a stale valid CTRF or reward.
-            if not self.environment.capabilities.mounted:
-                remote_outputs = [
-                    str(env_paths.reward_text_path),
-                    str(env_paths.reward_json_path),
-                    str(env_paths.verifier_dir / "ctrf.json"),
-                ]
-                if self.environment.os.value == "windows":
-                    quoted_outputs = " ".join(
-                        quote_shell_arg(path, self.environment.os)
-                        for path in remote_outputs
-                    )
-                    cleanup_command = (
-                        f"del /f /q {quoted_outputs} >nul 2>&1 & exit /b 0"
-                    )
-                else:
-                    cleanup_command = "rm -f -- " + " ".join(
-                        quote_shell_arg(path, self.environment.os)
-                        for path in remote_outputs
-                    )
-                cleanup_result = await self.environment.exec(command=cleanup_command)
-                if cleanup_result.return_code != 0:
-                    raise RuntimeError(
-                        "Failed to clear verifier outputs before dependency retry"
-                    )
-            for output_path in (
-                self.trial_paths.reward_text_path,
-                self.trial_paths.reward_json_path,
-                ctrf_path,
-            ):
-                output_path.unlink(missing_ok=True)
-
-        await clear_official_outputs()
-
-        attempts = []
-        for attempt, attempt_stdout_path in enumerate(attempt_paths, start=1):
-            env_attempt_stdout_path = str(
-                env_paths.verifier_dir
-                / attempt_stdout_path.relative_to(self.trial_paths.verifier_dir).as_posix()
-            )
-            command = build_execution_command(
-                test_script_path,
-                stdout_path=env_attempt_stdout_path,
-                task_os=self.environment.os,
-            )
-
-            # Runs as ``environment.default_user``, which the caller must set to
-            # the effective verifier user (step-level override or task fallback).
-            # Capture BaseException long enough to freeze whatever stdout was
-            # produced, then re-raise the exact cancellation/error after the
-            # lineage is durable. This does not turn an execution error into a
-            # retry and does not extend the outer verifier timeout.
-            attempt_error = None
-            try:
-                await self.environment.exec(command=command, env=env)
-            except BaseException as e:
-                attempt_error = e
-
-            if attempt_error is None and not self.environment.capabilities.mounted:
-                try:
-                    if self.include_logs or self.exclude_logs:
-                        await self.environment.download_dir_filtered(
-                            source_dir=str(env_paths.verifier_dir),
-                            target_dir=self.trial_paths.verifier_dir,
-                            include=self.include_logs or None,
-                            exclude=self.exclude_logs or None,
-                            protect=[
-                                self.trial_paths.reward_text_path.name,
-                                self.trial_paths.reward_json_path.name,
-                            ],
-                        )
-                    else:
-                        await self.environment.download_dir(
-                            source_dir=str(env_paths.verifier_dir),
-                            target_dir=self.trial_paths.verifier_dir,
-                        )
-                except asyncio.CancelledError as e:
-                    attempt_error = e
-                except Exception as e:
-                    attempt_error = DownloadVerifierDirError(
-                        "Failed to download verifier directory from environment"
-                    )
-                    attempt_error.__cause__ = e
-
-            stdout_sha256, stdout_bytes, stdout_truncated, stdout_text = (
-                _q38_stdout_evidence(attempt_stdout_path)
-            )
-            state = _q38_ctrf_state(ctrf_path)
-            reason_codes = _q38_dependency_setup_reasons(stdout_text)
-            transient_reason_codes = [
-                code
-                for code in reason_codes
-                if code in _Q38_TRANSIENT_RETRY_REASON_CODES
-            ]
-            retry = bool(
-                attempt_error is None
-                and state != "valid_nonempty"
-                and transient_reason_codes
-                and attempt < _Q38_VERIFIER_RETRY_MAX_ATTEMPTS
-            )
-            retry_backoff_seconds = (
-                _Q38_VERIFIER_RETRY_BACKOFF_SECONDS[attempt - 1]
-                if retry
-                else None
-            )
-            if attempt_error is not None:
-                terminal_reason = "execution_error"
-            elif retry:
-                terminal_reason = "retry_scheduled"
-            elif state == "valid_nonempty":
-                terminal_reason = "valid_ctrf"
-            elif transient_reason_codes:
-                terminal_reason = "retry_budget_exhausted"
-            elif reason_codes:
-                terminal_reason = "non_retryable_dependency_failure"
-            else:
-                terminal_reason = "no_retryable_dependency_signal"
-            attempts.append(
-                {
-                    "attempt": attempt,
-                    "ctrf_state": state,
-                    "dependency_reason_codes": reason_codes,
-                    "transient_retry_reason_codes": transient_reason_codes,
-                    "retry_scheduled": retry,
-                    "retry_backoff_seconds": retry_backoff_seconds,
-                    "retry_backoff_completed": False if retry else None,
-                    "retry_backoff_error_type": None,
-                    "retry_backoff_error_message_sha256": None,
-                    "terminal_reason": terminal_reason,
-                    "stdout_path": str(
-                        attempt_stdout_path.relative_to(self.trial_paths.trial_dir)
-                    ),
-                    "stdout_sha256": stdout_sha256,
-                    "stdout_bytes": stdout_bytes,
-                    "stdout_scan_truncated": stdout_truncated,
-                    "execution_error_type": (
-                        type(attempt_error).__name__ if attempt_error is not None else None
-                    ),
-                    "execution_error_message_sha256": (
-                        hashlib.sha256(str(attempt_error).encode("utf-8", errors="replace")).hexdigest()
-                        if attempt_error is not None
-                        else None
-                    ),
-                }
-            )
-
-            # Preserve exact attempt files and a human-readable aggregate.  For
-            # one attempt the canonical stdout remains byte-identical to Harbor's
-            # historical artifact; retry aggregates are chronological.
-            if len(attempts) == 1:
-                if attempt_stdout_path.is_file():
-                    self.trial_paths.test_stdout_path.write_bytes(
-                        attempt_stdout_path.read_bytes()
-                    )
-            else:
-                with self.trial_paths.test_stdout_path.open("wb") as merged:
-                    for record, path in zip(attempts, attempt_paths):
-                        merged.write(
-                            (
-                                f"===== verifier attempt {record['attempt']}/"
-                                f"{_Q38_VERIFIER_RETRY_MAX_ATTEMPTS} "
-                                f"ctrf={record['ctrf_state']} "
-                                f"dependency={','.join(record['dependency_reason_codes']) or 'none'} "
-                                f"error={record['execution_error_type'] or 'none'} "
-                                f"retry={str(record['retry_scheduled']).lower()} =====\\n"
-                            ).encode("utf-8")
-                        )
-                        if path.is_file():
-                            data = path.read_bytes()
-                            merged.write(data)
-                            if data and not data.endswith(b"\\n"):
-                                merged.write(b"\\n")
-
-            canonical_sha256, canonical_bytes, _, _ = _q38_stdout_evidence(
-                self.trial_paths.test_stdout_path
-            )
-            lineage = {
-                "schema_version": _Q38_VERIFIER_RETRY_LINEAGE_SCHEMA,
-                "policy": {
-                    "max_attempts": _Q38_VERIFIER_RETRY_MAX_ATTEMPTS,
-                    "retry_backoff_seconds": list(
-                        _Q38_VERIFIER_RETRY_BACKOFF_SECONDS
-                    ),
-                    "max_cumulative_backoff_seconds": sum(
-                        _Q38_VERIFIER_RETRY_BACKOFF_SECONDS
-                    ),
-                    "stdout_scan_max_bytes": _Q38_VERIFIER_RETRY_MAX_STDOUT_BYTES,
-                    "retry_gate": [
-                        "invalid_or_empty_ctrf",
-                        "pre_pytest_apt_pip_uv_context",
-                        "explicit_transient_transport_signal",
-                    ],
-                    "transient_retry_reason_codes": list(
-                        _Q38_TRANSIENT_RETRY_REASON_CODES
-                    ),
-                    "same_verifier_environment": True,
-                    "timeout_budget": "one existing outer verifier timeout spans all attempts",
-                },
-                "complete": bool(
-                    attempt_error is None
-                    and not retry
-                    and terminal_reason != "retry_budget_exhausted"
-                ),
-                "evidence_complete": True,
-                "terminal_reason": terminal_reason,
-                "retry_budget_exhausted": (
-                    terminal_reason == "retry_budget_exhausted"
-                ),
-                "attempt_count": len(attempts),
-                "attempts": attempts,
-                "canonical_stdout_path": str(
-                    self.trial_paths.test_stdout_path.relative_to(
-                        self.trial_paths.trial_dir
-                    )
-                ),
-                "canonical_stdout_sha256": canonical_sha256,
-                "canonical_stdout_bytes": canonical_bytes,
-            }
-            lineage_path.write_text(
-                json.dumps(lineage, indent=2, sort_keys=True) + "\\n",
-                encoding="utf-8",
-            )
-
-            if attempt_error is not None:
-                raise attempt_error
-
-            if not retry:
-                break
-
-            # A retry must not inherit a synthetic reward or malformed CTRF from
-            # the failed setup attempt.
-            try:
-                await clear_official_outputs()
-                # This remains inside Verifier.verify(), so Harbor's existing
-                # outer wait_for bounds retries and backoff together.
-                await _q38_dependency_retry_backoff(retry_backoff_seconds)
-            except BaseException as e:
-                attempts[-1]["retry_backoff_error_type"] = type(e).__name__
-                attempts[-1]["retry_backoff_error_message_sha256"] = hashlib.sha256(
-                    str(e).encode("utf-8", errors="replace")
-                ).hexdigest()
-                lineage["complete"] = False
-                lineage["terminal_reason"] = "retry_transition_interrupted"
-                lineage["attempts"] = attempts
-                lineage_path.write_text(
-                    json.dumps(lineage, indent=2, sort_keys=True) + "\\n",
-                    encoding="utf-8",
-                )
-                raise
-            attempts[-1]["retry_backoff_completed"] = True
-            lineage["attempts"] = attempts
-            lineage_path.write_text(
-                json.dumps(lineage, indent=2, sort_keys=True) + "\\n",
-                encoding="utf-8",
-            )
-"""
-
-# v3 supersedes the retained v2 template above. Keeping the prior exact bytes
-# makes the declared v2 installation digest auditable while upgrades are
-# rebuilt from the pristine pinned Harbor source.
 EXECUTION_NEW = """        if needs_chmod(test_script_path):
             await self.environment.exec(
                 command=f"chmod +x {quote_shell_arg(test_script_path, self.environment.os)}",
@@ -1861,23 +1575,9 @@ def transform(text: str) -> tuple[str, bool]:
     return text, True
 
 
-def patch(target: Path, source: Path | None = None) -> dict[str, object]:
+def patch(target: Path) -> dict[str, object]:
     before = target.read_text(encoding="utf-8")
-    upgraded_from: str | None = None
-    try:
-        after, changed = transform(before)
-    except RuntimeError:
-        before_sha = hashlib.sha256(before.encode()).hexdigest()
-        if source is None or before_sha not in LEGACY_INSTALLED_SHA256:
-            raise
-        pristine = source.read_text(encoding="utf-8")
-        after, pristine_changed = transform(pristine)
-        if not pristine_changed:
-            raise RuntimeError(
-                "pinned Harbor source already contains verifier retry patch"
-            )
-        changed = True
-        upgraded_from = before_sha
+    after, changed = transform(before)
     if changed:
         with tempfile.NamedTemporaryFile(
             mode="w", encoding="utf-8", dir=target.parent, delete=False
@@ -1892,7 +1592,6 @@ def patch(target: Path, source: Path | None = None) -> dict[str, object]:
         "changed": changed,
         "before_sha256": hashlib.sha256(before.encode()).hexdigest(),
         "after_sha256": hashlib.sha256(after.encode()).hexdigest(),
-        "upgraded_from_sha256": upgraded_from,
         "policy": POLICY,
     }
 
@@ -1900,13 +1599,9 @@ def patch(target: Path, source: Path | None = None) -> dict[str, object]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", required=True, type=Path)
-    parser.add_argument("--source", type=Path)
     parser.add_argument("--manifest", required=True, type=Path)
     args = parser.parse_args()
-    report = patch(
-        args.target.resolve(),
-        args.source.resolve() if args.source is not None else None,
-    )
+    report = patch(args.target.resolve())
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
     args.manifest.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(json.dumps(report, sort_keys=True))

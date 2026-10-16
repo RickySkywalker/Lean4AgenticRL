@@ -61,7 +61,7 @@ def make_agent(tmp: Path, **kw) -> Terminus2Dynamic:
     defaults.update(kw)
     a = Terminus2Dynamic(
         logs_dir=tmp / "agent",
-        model_name="openai/deepseek-v4-flash",
+        model_name="openai/amazon/LAR-27B",
         max_turns=250,
         api_base="http://127.0.0.1:8800/v1",
         temperature=0.6,
@@ -353,12 +353,12 @@ check(a._dynwf_spec_for_reinject.strip().startswith("Prepare the synthetic fixtu
 check(solve["prompt"].count(NEEDLE) == 1, "and the boundary prompt still carries the plan exactly once")
 
 print()
-print("== render_phase2 byte-compatibility: the legacy callers are untouched ==")
+print("== render_phase2 default and explicit handoff modes ==")
 doc = wf_render.load_wf()
-legacy_same, v1 = wf_render.render_phase2(doc, "task", SYNTHETIC_SPEC, True)
-new_same, v2 = wf_render.render_phase2(doc, "task", SYNTHETIC_SPEC, True, handoff=None)
-check(legacy_same == new_same and v1 == v2 == "injected",
-      "handoff=None renders the same bytes as the pre-patch signature")
+default_same, default_variant = wf_render.render_phase2(doc, "task", SYNTHETIC_SPEC, True)
+explicit_same, explicit_variant = wf_render.render_phase2(doc, "task", SYNTHETIC_SPEC, True, handoff=None)
+check(default_same == explicit_same and default_variant == explicit_variant == "injected",
+      "handoff=None selects the same prompt as the default handoff")
 compact_p, _ = wf_render.render_phase2(doc, "task", SYNTHETIC_SPEC, False, handoff="compact")
 check(wf_render.MEMORY_CLAIM_COMPACT in compact_p
       and wf_render.MEMORY_CLAIM_FRESH not in compact_p
@@ -366,8 +366,8 @@ check(wf_render.MEMORY_CLAIM_COMPACT in compact_p
       "compact carries exactly one memory claim, its own")
 check("Keep replying in the same JSON format" not in compact_p,
       "compact does not restate the JSON contract: it opens a fresh chat, so the template carries it")
-check("Keep replying in the same JSON format" in legacy_same,
-      "while same_chat still does, unchanged")
+check("Keep replying in the same JSON format" in default_same,
+      "same_chat restates the JSON contract")
 
 print()
 if FAILS:
