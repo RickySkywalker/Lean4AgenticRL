@@ -21,6 +21,12 @@
 
 This is the official repository for *Lean4AgenticRL: Advancing Agentic RL with Verifiable Multi-level Process Rewards*. We achieved **77.3%** on TerminalBench-2.1 using only 27B model, achieving state-of-the-art of the model in similar size.
 
+<p align="center">
+  <strong>Teaser Video</strong>
+</p>
+
+https://github.com/user-attachments/assets/e43922d8-c397-427b-a609-2706da8a90f2
+
 ![MainResult](./assets/figure/ResultPlot.png)
 
 ## Main Results
