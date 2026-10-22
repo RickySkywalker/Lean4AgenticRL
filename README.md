@@ -16,7 +16,7 @@
 </div>
 
 <p align="center">
-  <a href="https://github.com/RickySkywalker/Lean4AgenticRL/blob/main/assets/paper.pdf"><b>Paper Link</b>👁️</a>
+  <a href="https://arxiv.org/pdf/2610.22448"><b>Paper Link</b>👁️</a>
 </p>
 
 This is the official repository for *Lean4AgenticRL: Advancing Agentic RL with Verifiable Multi-level Process Rewards*. We achieved **77.3%** on TerminalBench-2.1 using only 27B model, achieving state-of-the-art of the model in similar size.
@@ -116,10 +116,12 @@ If you find our work useful, please cite it using the BibTeX entry below. This e
 
 ```bibtex
 @misc{wang2026lean4agenticrl,
-      title={{Lean4AgenticRL}: Advancing Agentic {RL} with Verifiable Multi-level Process Rewards},
+      title={Lean4AgenticRL: Advancing Agentic RL with Verifiable Multi-level Process Rewards}, 
       author={Ruida Wang and Gerald Friedland and Tong Zhang and Chris Kong},
       year={2026},
-      url={https://github.com/RickySkywalker/Lean4AgenticRL/blob/main/assets/paper.pdf},
-      note={Preprint},
+      eprint={2610.22448},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2610.22448}, 
 }
 ```
